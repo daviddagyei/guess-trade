@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 import logging
 import os
+import time
 
 # Configure logging
 logging.basicConfig(
@@ -68,17 +69,43 @@ async def health_check():
     """Detailed health check endpoint"""
     # Check Redis connection
     redis_status = "ok"
+    memory_cache_status = "ok"
+    system_health = "ok"
+    
+    # Check Redis cache availability
     try:
-        if not redis_cache.redis_client.ping():
-            redis_status = "error"
+        redis_is_available = redis_cache.redis.is_available()
+        if not redis_is_available:
+            redis_status = "unavailable - using memory fallback"
+            # System is still healthy if memory cache is working
     except Exception as e:
         redis_status = f"error: {str(e)}"
+    
+    # Always report memory cache status
+    try:
+        # Verify memory cache by setting and getting a test value
+        test_key = "_health_check_test"
+        test_value = {"timestamp": time.time()}
+        memory_set_success = redis_cache.memory.set_data(test_key, test_value, 60)
+        memory_get_result = redis_cache.memory.get_data(test_key)
+        
+        if not memory_set_success or not memory_get_result:
+            memory_cache_status = "error: operation failed"
+            # If both Redis and memory cache are down, system is unhealthy
+            if redis_status != "ok":
+                system_health = "error"
+    except Exception as e:
+        memory_cache_status = f"error: {str(e)}"
+        # If both Redis and memory cache are down, system is unhealthy
+        if redis_status != "ok":
+            system_health = "error"
         
     return {
-        "status": "ok",
+        "status": system_health,
         "version": app.version,
         "services": {
             "redis": redis_status,
+            "memory_cache": memory_cache_status
         }
     }
 
