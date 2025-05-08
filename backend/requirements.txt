@@ -1,0 +1,12 @@
+fastapi==0.103.1
+uvicorn==0.23.2
+websockets==11.0.3
+python-dotenv==1.0.0
+sqlalchemy==2.0.20
+psycopg2-binary==2.9.7
+pytest==7.4.0
+httpx==0.24.1
+redis==4.6.0
+python-multipart==0.0.6
+boto3==1.28.38
+requests==2.31.0
