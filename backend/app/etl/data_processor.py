@@ -53,18 +53,18 @@ class MarketDataProcessor:
         logger.info("Completed full data processing")
     
     async def process_stock_data(self, symbol: str):
-        """Process daily stock data for a symbol"""
+        """Process stock data for a symbol"""
         logger.info(f"Processing stock data for {symbol}")
         
         # Check cache first
-        cache_key = redis_cache.build_market_data_key(symbol, "daily")
-        cached_data = redis_cache.get_data(cache_key)
+        cache_key = redis_cache.build_market_data_key(symbol, "stock")
+        cached_data = await redis_cache.get_data(cache_key)
         
         if not cached_data:
             # Fetch from API
-            raw_data = await market_data_client.get_daily_time_series(symbol, "compact")
+            raw_data = await market_data_client.get_daily_time_series(symbol)
             if not raw_data or "Time Series (Daily)" not in raw_data:
-                logger.error(f"Failed to fetch daily data for {symbol}")
+                logger.error(f"Failed to fetch stock data for {symbol}")
                 return
             
             # Transform data
@@ -72,7 +72,7 @@ class MarketDataProcessor:
             processed_data = self._transform_stock_data(time_series)
             
             # Cache processed data
-            redis_cache.set_data(cache_key, processed_data, ttl_seconds=86400)  # 24 hours
+            await redis_cache.set_data(cache_key, processed_data, ttl_seconds=86400)  # 24 hours
             
             # Write to file for persistence
             self._save_to_file(symbol, "stock", processed_data)
@@ -83,17 +83,17 @@ class MarketDataProcessor:
             processed_data = cached_data
         
         # Calculate technical indicators
-        await self._calculate_technical_indicators(symbol, processed_data)
+        indicators = await self._calculate_technical_indicators(symbol, processed_data, asset_type="stock")
         
         return processed_data
     
     async def process_crypto_data(self, symbol: str):
-        """Process daily cryptocurrency data for a symbol"""
+        """Process crypto data for a symbol"""
         logger.info(f"Processing crypto data for {symbol}")
         
         # Check cache first
         cache_key = redis_cache.build_market_data_key(symbol, "crypto")
-        cached_data = redis_cache.get_data(cache_key)
+        cached_data = await redis_cache.get_data(cache_key)
         
         if not cached_data:
             # Fetch from API
@@ -107,18 +107,18 @@ class MarketDataProcessor:
             processed_data = self._transform_crypto_data(time_series)
             
             # Cache processed data
-            redis_cache.set_data(cache_key, processed_data, ttl_seconds=86400)  # 24 hours
+            await redis_cache.set_data(cache_key, processed_data, ttl_seconds=86400)  # 24 hours
             
             # Write to file for persistence
             self._save_to_file(symbol, "crypto", processed_data)
             
-            logger.info(f"Processed and cached crypto data for {symbol}")
+            logger.info(f"Processed and cached data for {symbol}")
         else:
-            logger.info(f"Using cached crypto data for {symbol}")
+            logger.info(f"Using cached data for {symbol}")
             processed_data = cached_data
         
         # Calculate technical indicators
-        await self._calculate_technical_indicators(symbol, processed_data, asset_type="crypto")
+        indicators = await self._calculate_technical_indicators(symbol, processed_data, asset_type="crypto")
         
         return processed_data
     
@@ -216,7 +216,7 @@ class MarketDataProcessor:
         
         # Cache indicators
         cache_key = f"indicators:{asset_type}:{symbol}"
-        redis_cache.set_data(cache_key, indicators, ttl_seconds=86400)
+        await redis_cache.set_data(cache_key, indicators, ttl_seconds=86400)
         
         logger.info(f"Cached technical indicators for {symbol}")
         

@@ -119,15 +119,16 @@ class ETLScheduler:
         """Run the ETL job immediately (manual trigger)"""
         logger.info("Manual ETL job triggered")
         
-        # Create a new event loop for this thread if needed
+        # Don't use run_until_complete if already in an event loop
         try:
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
+            # We're already in an event loop, so we should create a task instead
+            return asyncio.create_task(self._run_etl_job())
         except RuntimeError:
+            # No event loop running, create one
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
-        
-        # Run the ETL job
-        return loop.run_until_complete(self._run_etl_job())
+            return loop.run_until_complete(self._run_etl_job())
 
 
 # Singleton instance

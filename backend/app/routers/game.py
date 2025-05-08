@@ -31,9 +31,13 @@ class ConnectionManager:
         self.last_activity: Dict[str, float] = {}  # Timestamp of last message
         self.heartbeat_interval = heartbeat_interval
         self.heartbeat_timeout = heartbeat_timeout
-        
-        # Start background task for checking stale connections
-        asyncio.create_task(self._heartbeat_loop())
+        self.heartbeat_task = None
+    
+    async def start_heartbeat(self):
+        """Start the heartbeat loop as an async task"""
+        if self.heartbeat_task is None:
+            self.heartbeat_task = asyncio.create_task(self._heartbeat_loop())
+            logger.info("Heartbeat loop started")
     
     async def _heartbeat_loop(self):
         """Loop to check for stale connections and send pings"""
@@ -65,6 +69,8 @@ class ConnectionManager:
         self.active_connections[client_id] = websocket
         self.last_activity[client_id] = time.time()
         logger.info(f"Client connected: {client_id}")
+        # Ensure heartbeat is running whenever a client connects
+        await self.start_heartbeat()
         
     def disconnect(self, client_id: str):
         if client_id in self.active_connections:

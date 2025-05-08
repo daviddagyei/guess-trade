@@ -65,8 +65,31 @@ class RedisCache(CacheBase):
         # Connect to Redis
         self._client = None
         self._is_connected = False
-        asyncio.create_task(self.connect(redis_host, redis_port, redis_password))
+        
+        # Initialize the connection synchronously instead of using asyncio.create_task
+        try:
+            # Create the Redis client
+            client = redis.Redis(
+                host=redis_host,
+                port=redis_port,
+                password=redis_password,
+                decode_responses=True,
+                socket_timeout=2.0,
+                socket_connect_timeout=2.0
+            )
+            
+            # Try a synchronous ping to test connection
+            if client.ping():
+                self._client = client
+                self._is_connected = True
+                logger.info("Successfully connected to Redis")
+            else:
+                logger.error("Failed to connect to Redis: ping returned False")
+        except Exception as e:
+            logger.error(f"Failed to connect to Redis: {str(e)}")
+            self._is_connected = False
     
+    # The connect method can still be used for reconnection attempts
     async def connect(self, host: str, port: int, password: Optional[str] = None) -> bool:
         """
         Connect to Redis server
