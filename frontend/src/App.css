@@ -1,3 +1,12 @@
+/* Define theme colors */
+:root {
+  --primary-dark: #4B49AC;
+  --primary-light: #98BDFF;
+  --secondary-1: #7DA0FA;
+  --secondary-2: #7978E9;
+  --secondary-3: #F3797E;
+}
+
 .App {
   text-align: center;
 }
@@ -14,7 +23,7 @@
 }
 
 .App-header {
-  background-color: #282c34;
+  background-color: var(--primary-dark);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -25,7 +34,7 @@
 }
 
 .App-link {
-  color: #61dafb;
+  color: var(--primary-light);
 }
 
 @keyframes App-logo-spin {
@@ -65,12 +74,12 @@
 }
 
 .connection-status.connected {
-  background-color: #28a745;
+  background-color: var(--secondary-1);
   color: white;
 }
 
 .connection-status.disconnected {
-  background-color: #dc3545;
+  background-color: var(--secondary-3);
   color: white;
 }
 
@@ -123,9 +132,9 @@
 }
 
 .option.selected {
-  background-color: #007bff;
+  background-color: var(--primary-light);
   color: white;
-  border-color: #007bff;
+  border-color: var(--primary-light);
 }
 
 .test-button {
@@ -143,6 +152,29 @@
 
 .test-button:disabled {
   background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.start-button,
+.restart-button {
+  padding: 10px 15px;
+  background-color: var(--primary-light);
+  color: white;
+  border: 1px solid var(--primary-light);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.start-button:hover,
+.restart-button:hover {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+}
+
+.start-button:disabled,
+.restart-button:disabled {
+  opacity: 0.6;
   cursor: not-allowed;
 }
 

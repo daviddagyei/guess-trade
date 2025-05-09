@@ -160,6 +160,8 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     "result": result
                 })
                 
+                # If game status is next_round, wait for client to request next round
+                
             elif action == "get_game_state":
                 # Retrieve the current game state
                 session_id = manager.get_session_id(client_id)
@@ -178,6 +180,25 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 await manager.send_json(client_id, {
                     "type": "game_state",
                     "game_state": game_state
+                })
+                
+            elif action == "next_round":
+                session_id = manager.get_session_id(client_id)
+                
+                if not session_id:
+                    await manager.send_json(client_id, {
+                        "type": "error",
+                        "message": "No active game session"
+                    })
+                    continue
+                
+                # Generate next round
+                next_round_data = await game_engine.next_round(session_id)
+                
+                # Send next round data to client
+                await manager.send_json(client_id, {
+                    "type": "game_setup",
+                    "setup": next_round_data
                 })
                 
             else:

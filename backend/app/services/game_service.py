@@ -297,6 +297,10 @@ class GameService:
     
     def check_answer(self, user_answer: int, game_options: Dict[str, Any]) -> bool:
         """Check if the user's answer is correct"""
+        # If the user didn't select an answer (-1)
+        if user_answer < 0:
+            return False
+            
         options = game_options.get("options", [])
         for option in options:
             if option["id"] == user_answer and option.get("is_correct", False):
