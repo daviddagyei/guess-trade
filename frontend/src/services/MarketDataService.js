@@ -1,5 +1,5 @@
 /**
- * Service for fetching market data and technical indicators from the API
+ * Service for fetching market data an  // Technical indicators functionality has been removedtors from the API
  */
 class MarketDataService {
   constructor(baseUrl = 'http://localhost:8001') {
@@ -23,21 +23,6 @@ class MarketDataService {
   }
 
   /**
-   * Get a list of available cryptocurrency symbols
-   * @returns {Promise<Array<string>>} List of cryptocurrency symbols
-   */
-  async getCryptoSymbols() {
-    try {
-      const response = await fetch(`${this.apiBase}/market-data/crypto`);
-      const data = await response.json();
-      return data.symbols;
-    } catch (error) {
-      console.error('Error fetching crypto symbols:', error);
-      return [];
-    }
-  }
-
-  /**
    * Get market data for a specific stock
    * @param {string} symbol - Stock symbol (e.g., AAPL)
    * @returns {Promise<Object>} Market data for the stock
@@ -56,27 +41,9 @@ class MarketDataService {
   }
 
   /**
-   * Get market data for a specific cryptocurrency
-   * @param {string} symbol - Cryptocurrency symbol (e.g., BTC)
-   * @returns {Promise<Object>} Market data for the cryptocurrency
-   */
-  async getCryptoData(symbol) {
-    try {
-      const response = await fetch(`${this.apiBase}/market-data/crypto/${symbol}`);
-      if (!response.ok) {
-        throw new Error(`HTTP error ${response.status}`);
-      }
-      return await response.json();
-    } catch (error) {
-      console.error(`Error fetching crypto data for ${symbol}:`, error);
-      throw error;
-    }
-  }
-
-  /**
    * Get technical indicators for a specific asset
-   * @param {string} assetType - "stock" or "crypto"
-   * @param {string} symbol - Asset symbol (e.g., AAPL, BTC)
+   * @param {string} assetType - "stock"
+   * @param {string} symbol - Asset symbol (e.g., AAPL)
    * @returns {Promise<Object>} Technical indicators
    */
   async getTechnicalIndicators(assetType, symbol) {

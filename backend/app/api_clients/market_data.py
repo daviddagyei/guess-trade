@@ -6,6 +6,7 @@ import asyncio
 from typing import Dict, Any, Optional
 import yfinance as yf
 import pandas as pd
+import math
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
@@ -16,6 +17,12 @@ class MarketDataClient:
     def __init__(self):
         """Initialize the market data client"""
         logger.info("Initializing Yahoo Finance market data client")
+    
+    def _safe_convert(self, value):
+        """Convert value to string, handling NaN, infinity and None values"""
+        if value is None or (isinstance(value, float) and (math.isnan(value) or math.isinf(value))):
+            return "0.0"  # Replace problematic values with "0.0"
+        return str(value)
     
     async def get_daily_time_series(self, symbol: str, output_size: str = "compact") -> Optional[Dict[str, Any]]:
         """
@@ -57,11 +64,11 @@ class MarketDataClient:
             for date, row in ticker_data.iterrows():
                 date_str = date.strftime("%Y-%m-%d")
                 result["Time Series (Daily)"][date_str] = {
-                    "1. open": str(row["Open"]),
-                    "2. high": str(row["High"]),
-                    "3. low": str(row["Low"]),
-                    "4. close": str(row["Close"]),
-                    "5. volume": str(int(row["Volume"]))
+                    "1. open": self._safe_convert(row["Open"]),
+                    "2. high": self._safe_convert(row["High"]),
+                    "3. low": self._safe_convert(row["Low"]),
+                    "4. close": self._safe_convert(row["Close"]),
+                    "5. volume": self._safe_convert(int(row["Volume"]) if not pd.isna(row["Volume"]) else 0)
                 }
             
             return result
@@ -119,11 +126,11 @@ class MarketDataClient:
             for date, row in ticker_data.iterrows():
                 date_str = date.strftime("%Y-%m-%d %H:%M:%S")
                 result[f"Time Series ({interval})"][date_str] = {
-                    "1. open": str(row["Open"]),
-                    "2. high": str(row["High"]),
-                    "3. low": str(row["Low"]),
-                    "4. close": str(row["Close"]),
-                    "5. volume": str(int(row["Volume"]))
+                    "1. open": self._safe_convert(row["Open"]),
+                    "2. high": self._safe_convert(row["High"]),
+                    "3. low": self._safe_convert(row["Low"]),
+                    "4. close": self._safe_convert(row["Close"]),
+                    "5. volume": self._safe_convert(int(row["Volume"]) if not pd.isna(row["Volume"]) else 0)
                 }
             
             return result
@@ -131,64 +138,6 @@ class MarketDataClient:
         except Exception as e:
             logger.error(f"Error fetching intraday data for {symbol}: {str(e)}")
             return None
-    
-    async def get_crypto_data(self, symbol: str, market: str = "USD") -> Optional[Dict[str, Any]]:
-        """
-        Fetch cryptocurrency data
-        
-        Args:
-            symbol: Cryptocurrency symbol e.g., BTC, ETH
-            market: Market/Currency to convert to e.g., USD
-            
-        Returns:
-            Dictionary containing cryptocurrency data or None if the request fails
-        """
-        try:
-            # Format the ticker symbol for crypto
-            crypto_symbol = f"{symbol}-{market}"
-            
-            # Run the yfinance API call in a thread pool to avoid blocking
-            loop = asyncio.get_event_loop()
-            ticker_data = await loop.run_in_executor(
-                None, lambda: yf.Ticker(crypto_symbol).history(period="1y")
-            )
-            
-            if ticker_data.empty:
-                logger.warning(f"No data returned for crypto {symbol}-{market}")
-                return None
-            
-            # Format the data to match our expected structure
-            result = {
-                "Meta Data": {
-                    "1. Information": f"Daily Time Series for Digital Currency ({symbol})",
-                    "2. Digital Currency Code": symbol,
-                    "3. Digital Currency Name": symbol,  # We don't have the name from yfinance
-                    "4. Market Code": market,
-                    "5. Market Name": f"{market} Market",
-                    "6. Last Refreshed": datetime.now().strftime("%Y-%m-%d"),
-                    "7. Time Zone": "UTC"
-                },
-                "Time Series (Digital Currency Daily)": {}
-            }
-            
-            # Convert the DataFrame to our expected dictionary format
-            for date, row in ticker_data.iterrows():
-                date_str = date.strftime("%Y-%m-%d")
-                result["Time Series (Digital Currency Daily)"][date_str] = {
-                    "1a. open (USD)": str(row["Open"]),
-                    "2a. high (USD)": str(row["High"]),
-                    "3a. low (USD)": str(row["Low"]),
-                    "4a. close (USD)": str(row["Close"]),
-                    "5. volume": str(int(row["Volume"]) if not pd.isna(row["Volume"]) else 0),
-                    "6. market cap (USD)": "0"  # Not available from yfinance
-                }
-            
-            return result
-            
-        except Exception as e:
-            logger.error(f"Error fetching crypto data for {symbol}: {str(e)}")
-            return None
-
 
 # Singleton instance
 market_data_client = MarketDataClient()

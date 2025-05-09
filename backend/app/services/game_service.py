@@ -14,18 +14,13 @@ class GameService:
         """Initialize GameService with default settings"""
         # Available instruments for the game
         self.stock_instruments = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
-        self.crypto_instruments = ["BTC", "ETH", "ADA", "SOL", "DOT"]
         self.timeframes = ["5min", "15min", "30min", "60min", "daily"]
         
     def generate_session(self, difficulty: int = 1) -> Dict[str, Any]:
         """Generate a new game session with the given difficulty"""
-        # Choose asset type and instrument based on difficulty
-        asset_type = random.choice(["stock", "crypto"])
-        
-        if asset_type == "stock":
-            instrument = random.choice(self.stock_instruments)
-        else:
-            instrument = random.choice(self.crypto_instruments)
+        # Choose instrument
+        asset_type = "stock"
+        instrument = random.choice(self.stock_instruments)
             
         timeframe = random.choice(self.timeframes)
         
@@ -50,63 +45,33 @@ class GameService:
         """
         try:
             # Fetch market data using our API client
-            if asset_type == "stock":
-                data = await market_data_client.get_daily_time_series(instrument)
-                if not data or "Time Series (Daily)" not in data:
-                    # Fallback to mock data if API fails
-                    return self._generate_mock_options(instrument, timeframe, difficulty)
-                
-                # Extract time series data
-                time_series = data["Time Series (Daily)"]
-                dates = sorted(time_series.keys())
-                
-                # Get enough candles for setup + continuation
-                total_candles_needed = 100  # Enough for setup and all options
-                if len(dates) < total_candles_needed:
-                    # Not enough data, use mock
-                    return self._generate_mock_options(instrument, timeframe, difficulty)
-                
-                # Process the data
-                prices = []
-                for date in dates[-total_candles_needed:]:
-                    candle = time_series[date]
-                    prices.append({
-                        "date": date,
-                        "open": float(candle["1. open"]),
-                        "high": float(candle["2. high"]),
-                        "low": float(candle["3. low"]),
-                        "close": float(candle["4. close"]),
-                        "volume": int(candle["5. volume"])
-                    })
-                
-            elif asset_type == "crypto":
-                data = await market_data_client.get_crypto_data(instrument)
-                if not data or "Time Series (Digital Currency Daily)" not in data:
-                    # Fallback to mock data if API fails
-                    return self._generate_mock_options(instrument, timeframe, difficulty)
-                
-                # Extract time series data
-                time_series = data["Time Series (Digital Currency Daily)"]
-                dates = sorted(time_series.keys())
-                
-                # Get enough candles for setup + continuation
-                total_candles_needed = 100  # Enough for setup and all options
-                if len(dates) < total_candles_needed:
-                    # Not enough data, use mock
-                    return self._generate_mock_options(instrument, timeframe, difficulty)
-                
-                # Process the data
-                prices = []
-                for date in dates[-total_candles_needed:]:
-                    candle = time_series[date]
-                    prices.append({
-                        "date": date,
-                        "open": float(candle["1a. open (USD)"]),
-                        "high": float(candle["2a. high (USD)"]),
-                        "low": float(candle["3a. low (USD)"]),
-                        "close": float(candle["4a. close (USD)"]),
-                        "volume": float(candle["5. volume"])
-                    })
+            data = await market_data_client.get_daily_time_series(instrument)
+            if not data or "Time Series (Daily)" not in data:
+                # Fallback to mock data if API fails
+                return self._generate_mock_options(instrument, timeframe, difficulty)
+            
+            # Extract time series data
+            time_series = data["Time Series (Daily)"]
+            dates = sorted(time_series.keys())
+            
+            # Get enough candles for setup + continuation
+            total_candles_needed = 100  # Enough for setup and all options
+            if len(dates) < total_candles_needed:
+                # Not enough data, use mock
+                return self._generate_mock_options(instrument, timeframe, difficulty)
+            
+            # Process the data
+            prices = []
+            for date in dates[-total_candles_needed:]:
+                candle = time_series[date]
+                prices.append({
+                    "date": date,
+                    "open": float(candle["1. open"]),
+                    "high": float(candle["2. high"]),
+                    "low": float(candle["3. low"]),
+                    "close": float(candle["4. close"]),
+                    "volume": int(candle["5. volume"])
+                })
             
             # Split data into setup and options sections
             setup_candles = 50 + (10 * difficulty)
@@ -253,11 +218,11 @@ class GameService:
     
     def _generate_mock_options(self, instrument: str, timeframe: str, difficulty: int) -> Dict[str, Any]:
         """Generate mock data when real market data is not available"""
-        # Determine type of asset based on instrument name
-        asset_type = "crypto" if instrument in self.crypto_instruments else "stock"
+        # Set asset type to stock only
+        asset_type = "stock"
         
         # Generate some basic mock price data
-        base_price = random.uniform(50, 500) if asset_type == "stock" else random.uniform(1000, 50000)
+        base_price = random.uniform(50, 500)
         
         # Generate setup data (historical prices)
         setup_data = []

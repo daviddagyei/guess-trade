@@ -13,8 +13,8 @@ class User(BaseModel):
     score = Column(Integer, default=0)
     games_played = Column(Integer, default=0)
     
-    # Add relationship to game sessions
-    sessions = relationship("GameSession", back_populates="user")
+    # Remove relationship for testing purposes
+    # sessions = relationship("GameSession", back_populates="user", lazy="dynamic")
     
     def __repr__(self):
         return f"<User {self.username}>"

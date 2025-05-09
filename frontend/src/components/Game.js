@@ -40,21 +40,11 @@ const Game = () => {
 
   // Market data state
   const [availableSymbols, setAvailableSymbols] = useState({
-    stocks: [],
-    crypto: []
+    stocks: []
   });
   const [selectedAssetType, setSelectedAssetType] = useState('stock');
   const [selectedSymbol, setSelectedSymbol] = useState('');
   const [marketData, setMarketData] = useState(null);
-  const [technicalIndicators, setTechnicalIndicators] = useState(null);
-  const [selectedIndicators, setSelectedIndicators] = useState({
-    sma20: true,
-    sma50: false,
-    sma200: false,
-    bollinger: false,
-    rsi: false,
-    macd: false
-  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   
@@ -66,9 +56,7 @@ const Game = () => {
     const fetchSymbols = async () => {
       try {
         const stocks = await marketDataServiceRef.current.getStockSymbols();
-        const crypto = await marketDataServiceRef.current.getCryptoSymbols();
-        
-        setAvailableSymbols({ stocks, crypto });
+        setAvailableSymbols({ stocks });
         
         // Set default selected symbol if available
         if (stocks.length > 0) {
@@ -125,7 +113,7 @@ const Game = () => {
     };
   }, []);
 
-  // Fetch market data when symbol or asset type changes
+  // Fetch market data when symbol changes
   useEffect(() => {
     const fetchMarketData = async () => {
       if (!selectedSymbol) return;
@@ -134,22 +122,8 @@ const Game = () => {
       setError(null);
       
       try {
-        let data;
-        if (selectedAssetType === 'stock') {
-          data = await marketDataServiceRef.current.getStockData(selectedSymbol);
-        } else {
-          data = await marketDataServiceRef.current.getCryptoData(selectedSymbol);
-        }
-        
+        const data = await marketDataServiceRef.current.getStockData(selectedSymbol);
         setMarketData(data);
-        
-        // Also fetch technical indicators
-        const indicators = await marketDataServiceRef.current.getTechnicalIndicators(
-          selectedAssetType, 
-          selectedSymbol
-        );
-        
-        setTechnicalIndicators(indicators);
       } catch (error) {
         console.error('Error fetching market data:', error);
         setError(`Failed to fetch data for ${selectedSymbol}`);
@@ -161,7 +135,7 @@ const Game = () => {
     if (selectedSymbol && marketDataServiceRef.current) {
       fetchMarketData();
     }
-  }, [selectedSymbol, selectedAssetType]);
+  }, [selectedSymbol]);
   
   const handleOptionSelect = (optionIndex) => {
     setGameState(prevState => ({
@@ -177,27 +151,8 @@ const Game = () => {
     }
   };
 
-  const handleAssetTypeChange = (e) => {
-    const newAssetType = e.target.value;
-    setSelectedAssetType(newAssetType);
-    
-    // Update selected symbol to first of the new type
-    if (newAssetType === 'stock' && availableSymbols.stocks.length > 0) {
-      setSelectedSymbol(availableSymbols.stocks[0]);
-    } else if (newAssetType === 'crypto' && availableSymbols.crypto.length > 0) {
-      setSelectedSymbol(availableSymbols.crypto[0]);
-    }
-  };
-
   const handleSymbolChange = (e) => {
     setSelectedSymbol(e.target.value);
-  };
-
-  const toggleIndicator = (indicator) => {
-    setSelectedIndicators(prev => ({
-      ...prev,
-      [indicator]: !prev[indicator]
-    }));
   };
 
   // Prepare chart data
@@ -223,113 +178,6 @@ const Game = () => {
       }
     ];
     
-    // Add selected technical indicators if available
-    if (technicalIndicators) {
-      // Add SMA 20
-      if (selectedIndicators.sma20) {
-        datasets.push({
-          label: 'SMA 20',
-          data: technicalIndicators.sma_20,
-          borderColor: 'rgb(255, 99, 132)',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: 0,
-          yAxisID: 'y',
-        });
-      }
-      
-      // Add SMA 50
-      if (selectedIndicators.sma50) {
-        datasets.push({
-          label: 'SMA 50',
-          data: technicalIndicators.sma_50,
-          borderColor: 'rgb(54, 162, 235)',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: 0,
-          yAxisID: 'y',
-        });
-      }
-      
-      // Add SMA 200
-      if (selectedIndicators.sma200) {
-        datasets.push({
-          label: 'SMA 200',
-          data: technicalIndicators.sma_200,
-          borderColor: 'rgb(255, 159, 64)',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: 0,
-          yAxisID: 'y',
-        });
-      }
-      
-      // Add Bollinger Bands
-      if (selectedIndicators.bollinger) {
-        datasets.push({
-          label: 'Upper Band',
-          data: technicalIndicators.upper_band,
-          borderColor: 'rgba(153, 102, 255, 0.8)',
-          backgroundColor: 'transparent',
-          borderWidth: 1,
-          borderDash: [5, 5],
-          pointRadius: 0,
-          yAxisID: 'y',
-        });
-        
-        datasets.push({
-          label: 'Lower Band',
-          data: technicalIndicators.lower_band,
-          borderColor: 'rgba(153, 102, 255, 0.8)',
-          backgroundColor: 'transparent',
-          borderWidth: 1,
-          borderDash: [5, 5],
-          pointRadius: 0,
-          yAxisID: 'y',
-          fill: {
-            target: '-1',
-            above: 'rgba(153, 102, 255, 0.1)',
-          }
-        });
-      }
-      
-      // Add RSI
-      if (selectedIndicators.rsi) {
-        datasets.push({
-          label: 'RSI',
-          data: technicalIndicators.rsi,
-          borderColor: 'rgb(201, 203, 207)',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: 0,
-          yAxisID: 'y1',
-        });
-      }
-      
-      // Add MACD
-      if (selectedIndicators.macd) {
-        datasets.push({
-          label: 'MACD',
-          data: technicalIndicators.macd,
-          borderColor: 'rgb(255, 99, 132)',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: 0,
-          yAxisID: 'y2',
-        });
-        
-        datasets.push({
-          label: 'MACD Signal',
-          data: technicalIndicators.macd_signal,
-          borderColor: 'rgb(54, 162, 235)',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: 0,
-          yAxisID: 'y2',
-        });
-      }
-    }
-    
     return {
       labels: dates,
       datasets: datasets
@@ -350,7 +198,7 @@ const Game = () => {
       },
       title: {
         display: true,
-        text: selectedSymbol ? `${selectedSymbol} Chart with Technical Indicators` : 'Loading...',
+        text: selectedSymbol ? `${selectedSymbol} Price Chart` : 'Loading...',
       },
       tooltip: {
         callbacks: {
@@ -386,30 +234,6 @@ const Game = () => {
           display: true,
           text: 'Price'
         }
-      },
-      y1: {
-        display: selectedIndicators.rsi,
-        position: 'right',
-        grid: {
-          drawOnChartArea: false,
-        },
-        title: {
-          display: true,
-          text: 'RSI'
-        },
-        min: 0,
-        max: 100
-      },
-      y2: {
-        display: selectedIndicators.macd,
-        position: 'right',
-        grid: {
-          drawOnChartArea: false,
-        },
-        title: {
-          display: true,
-          text: 'MACD'
-        }
       }
     }
   };
@@ -426,19 +250,6 @@ const Game = () => {
       
       <div className="market-data-controls">
         <div className="control-group">
-          <label htmlFor="asset-type">Asset Type:</label>
-          <select 
-            id="asset-type" 
-            value={selectedAssetType} 
-            onChange={handleAssetTypeChange}
-            disabled={isLoading}
-          >
-            <option value="stock">Stock</option>
-            <option value="crypto">Cryptocurrency</option>
-          </select>
-        </div>
-        
-        <div className="control-group">
           <label htmlFor="symbol">Symbol:</label>
           <select 
             id="symbol" 
@@ -446,75 +257,14 @@ const Game = () => {
             onChange={handleSymbolChange}
             disabled={isLoading}
           >
-            {selectedAssetType === 'stock' && availableSymbols.stocks.map(symbol => (
-              <option key={symbol} value={symbol}>{symbol}</option>
-            ))}
-            {selectedAssetType === 'crypto' && availableSymbols.crypto.map(symbol => (
+            {availableSymbols.stocks.map(symbol => (
               <option key={symbol} value={symbol}>{symbol}</option>
             ))}
           </select>
         </div>
       </div>
       
-      <div className="indicator-toggles">
-        <div className="toggle-group">
-          <label>
-            <input 
-              type="checkbox" 
-              checked={selectedIndicators.sma20} 
-              onChange={() => toggleIndicator('sma20')} 
-            />
-            SMA 20
-          </label>
-          
-          <label>
-            <input 
-              type="checkbox" 
-              checked={selectedIndicators.sma50} 
-              onChange={() => toggleIndicator('sma50')} 
-            />
-            SMA 50
-          </label>
-          
-          <label>
-            <input 
-              type="checkbox" 
-              checked={selectedIndicators.sma200} 
-              onChange={() => toggleIndicator('sma200')} 
-            />
-            SMA 200
-          </label>
-        </div>
-        
-        <div className="toggle-group">
-          <label>
-            <input 
-              type="checkbox" 
-              checked={selectedIndicators.bollinger} 
-              onChange={() => toggleIndicator('bollinger')} 
-            />
-            Bollinger Bands
-          </label>
-          
-          <label>
-            <input 
-              type="checkbox" 
-              checked={selectedIndicators.rsi} 
-              onChange={() => toggleIndicator('rsi')} 
-            />
-            RSI
-          </label>
-          
-          <label>
-            <input 
-              type="checkbox" 
-              checked={selectedIndicators.macd} 
-              onChange={() => toggleIndicator('macd')} 
-            />
-            MACD
-          </label>
-        </div>
-      </div>
+      {/* Technical indicator toggles have been removed */}
       
       <div className="chart-container">
         {isLoading ? (
