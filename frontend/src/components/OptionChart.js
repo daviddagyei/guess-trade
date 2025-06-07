@@ -29,10 +29,13 @@ const OptionChart = ({ mainData, optionData }) => {
     datasets: [
       {
         data: prices,
-        borderColor: 'rgb(75, 192, 192)',
-        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-        tension: 0.1,
+        borderColor: '#00ffff',
+        backgroundColor: 'rgba(0, 255, 255, 0.1)',
+        tension: 0.3,
         pointRadius: 0,
+        borderWidth: 2,
+        pointHoverRadius: 0,
+        fill: true,
       }
     ]
   };
@@ -48,18 +51,31 @@ const OptionChart = ({ mainData, optionData }) => {
         enabled: false,
       },
     },
-    scales: {
-      x: {
-        display: false,
-      },
-      y: {
-        display: false,
-      }
+    interaction: {
+      intersect: false,
+      mode: 'index',
     },
     elements: {
       point: {
-        radius: 0,
+        hoverRadius: 0,
+      }
+    },
+    scales: {
+      x: {
+        display: false,
+        grid: {
+          display: false,
+        },
       },
+      y: {
+        display: false,
+        grid: {
+          display: false,
+        },
+      },
+    },
+    animation: {
+      duration: 0, // Disable animations for better performance
     },
   };
   

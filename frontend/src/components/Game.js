@@ -1,4 +1,3 @@
-/* eslint-disable */
 import React, { useState, useEffect, useRef } from 'react';
 import { Line } from 'react-chartjs-2';
 import {
@@ -33,7 +32,6 @@ const Game = () => {
     options: [],
     overlays: null,
     selectedOption: null,
-    correctOption: null,  // track correct option id
     score: 0,
     message: 'Waiting for game data...',
     lives: 3,
@@ -106,6 +104,14 @@ const Game = () => {
     
     wsRef.current.onMessage((data) => {
       console.log('Received game data:', data);
+      
+      // Handle heartbeat ping from server
+      if (data.type === 'ping') {
+        // Respond with pong to maintain connection
+        wsRef.current.send({ type: 'pong' });
+        return;
+      }
+      
       if (data.message) {
         setGameState(prevState => ({
           ...prevState,
@@ -116,11 +122,11 @@ const Game = () => {
       // Handle different message types
       if (data.type === 'game_start') {
         handleGameSetup(data.game_data);
+      } else if (data.type === 'game_setup') {
+        // Handle next round setup - same as game start
+        handleGameSetup(data.setup);
       } else if (data.type === 'game_result') {
         handleGameResult(data.result);
-      } else if (data.type === 'game_setup') {
-        // next round data
-        handleGameSetup(data.setup);
       } else if (data.type === 'error') {
         setError(data.message);
       }
@@ -175,13 +181,23 @@ const Game = () => {
   }, [selectedSymbol]);
   
   const handleOptionSelect = (optionIndex) => {
+    // Only allow selection if we're in the QUESTION phase
     if (gameState.gamePhase !== 'QUESTION') return;
-    const optionId = gameState.options[optionIndex]?.id;
-    // store selected option ID
-    setGameState(prev => ({ ...prev, selectedOption: optionId }));
+    
+    setGameState(prevState => ({
+      ...prevState,
+      selectedOption: optionIndex
+    }));
+    
+    // Clear the countdown timer since we've made a selection
     if (countdownInterval) clearInterval(countdownInterval);
+    
+    // Submit the answer immediately
     if (wsRef.current) {
-      wsRef.current.send({ action: 'submit_answer', answer: optionId });
+      wsRef.current.send({
+        action: 'submit_answer',
+        answer: optionIndex
+      });
     }
   };
 
@@ -203,11 +219,16 @@ const Game = () => {
           {
             label: `${gameState.setup.instrument || 'Price'} Chart`,
             data: prices,
-            borderColor: 'rgb(75, 192, 192)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            tension: 0.1,
+            borderColor: '#00ffff',
+            backgroundColor: 'rgba(0, 255, 255, 0.1)',
+            tension: 0.2,
             yAxisID: 'y',
-            pointRadius: 0, // Hide points for cleaner look
+            pointRadius: 0,
+            borderWidth: 2,
+            pointHoverRadius: 6,
+            pointHoverBackgroundColor: '#ff007f',
+            pointHoverBorderColor: '#ffffff',
+            pointHoverBorderWidth: 2,
           }
         ]
       };
@@ -223,11 +244,16 @@ const Game = () => {
           {
             label: `${selectedSymbol} Price`,
             data: close,
-            borderColor: 'rgb(75, 192, 192)',
-            backgroundColor: 'rgba(75, 192, 192, 0.2)',
-            tension: 0.1,
+            borderColor: '#00ffff',
+            backgroundColor: 'rgba(0, 255, 255, 0.1)',
+            tension: 0.2,
             yAxisID: 'y',
             pointRadius: 0,
+            borderWidth: 2,
+            pointHoverRadius: 6,
+            pointHoverBackgroundColor: '#ff007f',
+            pointHoverBorderColor: '#ffffff',
+            pointHoverBorderWidth: 2,
           }
         ]
       };
@@ -244,6 +270,7 @@ const Game = () => {
   
   const chartOptions = {
     responsive: true,
+    maintainAspectRatio: false,
     interaction: {
       mode: 'index',
       intersect: false,
@@ -251,12 +278,43 @@ const Game = () => {
     plugins: {
       legend: {
         position: 'top',
+        labels: {
+          color: '#ffffff',
+          font: {
+            family: 'Orbitron',
+            size: 12,
+            weight: 600
+          },
+          usePointStyle: true,
+          pointStyle: 'circle'
+        }
       },
       title: {
         display: true,
-        text: selectedSymbol ? `${selectedSymbol} Price Chart` : 'Loading...',
+        text: gameState.setup?.instrument ? `${gameState.setup.instrument} Price Chart` : 'AlphaWave Chart',
+        color: '#00ffff',
+        font: {
+          family: 'Orbitron',
+          size: 16,
+          weight: 700
+        }
       },
       tooltip: {
+        backgroundColor: 'rgba(15, 15, 25, 0.95)',
+        titleColor: '#00ffff',
+        bodyColor: '#ffffff',
+        borderColor: '#00ffff',
+        borderWidth: 1,
+        cornerRadius: 8,
+        titleFont: {
+          family: 'Orbitron',
+          size: 12,
+          weight: 600
+        },
+        bodyFont: {
+          family: 'Exo 2',
+          size: 11
+        },
         callbacks: {
           label: function(context) {
             let label = context.dataset.label || '';
@@ -280,10 +338,28 @@ const Game = () => {
         display: true,
         title: {
           display: true,
-          text: 'Date'
+          text: 'Time',
+          color: '#b0b0b0',
+          font: {
+            family: 'Orbitron',
+            size: 12,
+            weight: 600
+          }
         },
         ticks: {
-          display: false // Hide the date labels
+          display: false,
+          color: '#b0b0b0',
+          font: {
+            family: 'Exo 2',
+            size: 10
+          }
+        },
+        grid: {
+          color: 'rgba(0, 255, 255, 0.1)',
+          lineWidth: 1
+        },
+        border: {
+          color: 'rgba(0, 255, 255, 0.3)'
         }
       },
       y: {
@@ -291,7 +367,27 @@ const Game = () => {
         position: 'left',
         title: {
           display: true,
-          text: 'Price'
+          text: 'Price',
+          color: '#b0b0b0',
+          font: {
+            family: 'Orbitron',
+            size: 12,
+            weight: 600
+          }
+        },
+        ticks: {
+          color: '#b0b0b0',
+          font: {
+            family: 'Exo 2',
+            size: 10
+          }
+        },
+        grid: {
+          color: 'rgba(0, 255, 255, 0.1)',
+          lineWidth: 1
+        },
+        border: {
+          color: 'rgba(0, 255, 255, 0.3)'
         }
       }
     }
@@ -312,7 +408,6 @@ const Game = () => {
       options: setup.options,
       overlays: setup.overlays,
       selectedOption: null,
-      correctOption: null,  // reset previous correct
       gamePhase: 'LOADING',
       countdownTime: 20,
       message: 'Preparing chart data...'
@@ -348,16 +443,15 @@ const Game = () => {
     setGameState(prevState => ({
       ...prevState,
       selectedOption: result.user_answer,
-      correctOption: result.correct_option,  // set correct option
       score: result.score,
       lives: result.lives,
       streak: result.streak,
       round: result.round,
       gamePhase: 'REVEAL',
-      message: result.is_correct ? 'Correct! Well done!' : 'incorrect',
+      message: result.is_correct ? 'Correct! Well done!' : 'Incorrect! Try again.',
     }));
     
-    // After feedback, proceed or end
+    // Wait 3 seconds then either continue or end game
     revealTimerRef.current = setTimeout(() => {
       if (result.status === 'completed') {
         // Game over
@@ -367,7 +461,7 @@ const Game = () => {
           message: 'Game Over! ' + (result.lives <= 0 ? 'You ran out of lives.' : 'Time is up.')
         }));
       } else {
-        // Request next round (regardless of correct or incorrect)
+        // Request next round
         if (wsRef.current) {
           wsRef.current.send({ action: 'next_round' });
         }
@@ -472,14 +566,10 @@ const Game = () => {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
-  // Compute correct and incorrect indices for highlighting
-  const correctIndex = gameState.options.findIndex(opt => opt.id === gameState.correctOption);
-  const selectedOptionIndex = gameState.options.findIndex(opt => opt.id === gameState.selectedOption);
-
   return (
     <div className="game-container">
       <div className="game-header">
-        <h1>AlphaWave</h1>
+        <h1>GuessTrade Game</h1>
         
         {/* Game HUD with lives, score, streak, and timers */}
         <div className="game-hud">
@@ -504,7 +594,7 @@ const Game = () => {
         {/* INIT phase - show start button */}
         {gameState.gamePhase === 'INIT' && (
           <div className="init-screen">
-            <h2>Welcome to AlphaWave</h2>
+            <h2>Welcome to GuessTrade</h2>
             <p>Predict the price action continuation from the options below!</p>
             <button 
               className="start-button"
@@ -545,25 +635,32 @@ const Game = () => {
             
             {/* Display option charts */}
             <div className="options-container">
-              {gameState.options.map((option, index) => {
-                const letter = ['A','B','C','D'][index];
-                const isCorrect = gameState.gamePhase === 'REVEAL' && index === correctIndex;
-                const isWrong = gameState.gamePhase === 'REVEAL' && index === selectedOptionIndex && !isCorrect;
-
+              {['A', 'B', 'C', 'D'].map((letter, index) => {
+                const isSelected = gameState.selectedOption === index;
+                const isCorrect = gameState.gamePhase === 'REVEAL' && 
+                  index === gameState.options.findIndex(option => option.correct);
+                
                 let optionClass = 'option';
                 if (gameState.gamePhase === 'REVEAL') {
                   if (isCorrect) optionClass += ' correct';
-                  else if (isWrong) optionClass += ' incorrect';
+                  else if (isSelected) optionClass += ' incorrect';
                   else optionClass += ' faded';
-                } else if (gameState.selectedOption === option.id) {
+                } else if (isSelected) {
                   optionClass += ' selected';
                 }
-
+                
                 return (
-                  <div key={option.id} className={optionClass} onClick={() => handleOptionSelect(index)}>
+                  <div 
+                    key={index}
+                    className={optionClass}
+                    onClick={() => handleOptionSelect(index)}
+                  >
                     <div className="option-label">{letter}</div>
-                    {gameState.setup?.data && (
-                      <OptionChart mainData={gameState.setup.data} optionData={option.data} />
+                    {gameState.options[index] && gameState.setup?.data && (
+                      <OptionChart 
+                        mainData={gameState.setup.data}
+                        optionData={gameState.options[index].data}
+                      />
                     )}
                   </div>
                 );
