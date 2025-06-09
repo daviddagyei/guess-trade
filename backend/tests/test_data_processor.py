@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 # Import the module to test
 from app.etl.data_processor import MarketDataProcessor
-from app.technical_analysis.indicators import technical_indicators
+
 
 @pytest.fixture
 def data_processor():

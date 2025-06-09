@@ -128,6 +128,7 @@ class GameEngine:
         result = {
             "session_id": session_id,
             "is_correct": is_correct,
+            "user_answer": user_answer,
             "score": game_state["score"],
             "round_score": score,
             "time_taken": time_taken,

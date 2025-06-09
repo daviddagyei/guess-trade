@@ -64,6 +64,7 @@ const Game = () => {
   // References for animation timers
   const spinnerTimerRef = useRef(null);
   const revealTimerRef = useRef(null);
+  const nextRoundTimeoutRef = useRef(null);
 
   // Initialize services
   useEffect(() => {
@@ -104,14 +105,6 @@ const Game = () => {
     
     wsRef.current.onMessage((data) => {
       console.log('Received game data:', data);
-      
-      // Handle heartbeat ping from server
-      if (data.type === 'ping') {
-        // Respond with pong to maintain connection
-        wsRef.current.send({ type: 'pong' });
-        return;
-      }
-      
       if (data.message) {
         setGameState(prevState => ({
           ...prevState,
@@ -123,12 +116,24 @@ const Game = () => {
       if (data.type === 'game_start') {
         handleGameSetup(data.game_data);
       } else if (data.type === 'game_setup') {
-        // Handle next round setup - same as game start
+        // Handle next round data (same as game_start)
         handleGameSetup(data.setup);
       } else if (data.type === 'game_result') {
         handleGameResult(data.result);
+      } else if (data.type === 'next_round' && data.game_data) {
+        // Handle next round data (same as game_start)
+        handleGameSetup(data.game_data);
       } else if (data.type === 'error') {
         setError(data.message);
+        // Clear loading state on error
+        setGameState(prevState => ({
+          ...prevState,
+          gamePhase: 'INIT',
+          message: data.message || 'An error occurred'
+        }));
+      } else {
+        // Log unhandled message types for debugging
+        console.log('Unhandled message type:', data.type, data);
       }
     });
     
@@ -153,6 +158,7 @@ const Game = () => {
       if (sessionInterval) clearInterval(sessionInterval);
       if (spinnerTimerRef.current) clearTimeout(spinnerTimerRef.current);
       if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+      if (nextRoundTimeoutRef.current) clearTimeout(nextRoundTimeoutRef.current);
     };
   }, []);
 
@@ -219,16 +225,11 @@ const Game = () => {
           {
             label: `${gameState.setup.instrument || 'Price'} Chart`,
             data: prices,
-            borderColor: '#00ffff',
-            backgroundColor: 'rgba(0, 255, 255, 0.1)',
-            tension: 0.2,
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1,
             yAxisID: 'y',
-            pointRadius: 0,
-            borderWidth: 2,
-            pointHoverRadius: 6,
-            pointHoverBackgroundColor: '#ff007f',
-            pointHoverBorderColor: '#ffffff',
-            pointHoverBorderWidth: 2,
+            pointRadius: 0, // Hide points for cleaner look
           }
         ]
       };
@@ -244,16 +245,11 @@ const Game = () => {
           {
             label: `${selectedSymbol} Price`,
             data: close,
-            borderColor: '#00ffff',
-            backgroundColor: 'rgba(0, 255, 255, 0.1)',
-            tension: 0.2,
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1,
             yAxisID: 'y',
             pointRadius: 0,
-            borderWidth: 2,
-            pointHoverRadius: 6,
-            pointHoverBackgroundColor: '#ff007f',
-            pointHoverBorderColor: '#ffffff',
-            pointHoverBorderWidth: 2,
           }
         ]
       };
@@ -266,11 +262,10 @@ const Game = () => {
     };
   };
   
-  const chartData = buildChartData();
-  
+  const fontFamily = `'TT Fellows Uni Width', 'Space Mono', monospace`;
+
   const chartOptions = {
     responsive: true,
-    maintainAspectRatio: false,
     interaction: {
       mode: 'index',
       intersect: false,
@@ -279,42 +274,22 @@ const Game = () => {
       legend: {
         position: 'top',
         labels: {
-          color: '#ffffff',
           font: {
-            family: 'Orbitron',
-            size: 12,
-            weight: 600
-          },
-          usePointStyle: true,
-          pointStyle: 'circle'
+            family: fontFamily,
+            size: 14
+          }
         }
       },
       title: {
         display: true,
-        text: gameState.setup?.instrument ? `${gameState.setup.instrument} Price Chart` : 'AlphaWave Chart',
-        color: '#00ffff',
+        text: selectedSymbol ? `${selectedSymbol} Price Chart` : 'Loading...',
         font: {
-          family: 'Orbitron',
-          size: 16,
-          weight: 700
+          family: fontFamily,
+          weight: 'bold',
+          size: 18
         }
       },
       tooltip: {
-        backgroundColor: 'rgba(15, 15, 25, 0.95)',
-        titleColor: '#00ffff',
-        bodyColor: '#ffffff',
-        borderColor: '#00ffff',
-        borderWidth: 1,
-        cornerRadius: 8,
-        titleFont: {
-          family: 'Orbitron',
-          size: 12,
-          weight: 600
-        },
-        bodyFont: {
-          family: 'Exo 2',
-          size: 11
-        },
         callbacks: {
           label: function(context) {
             let label = context.dataset.label || '';
@@ -330,6 +305,14 @@ const Game = () => {
             }
             return label;
           }
+        },
+        titleFont: {
+          family: fontFamily,
+          size: 14
+        },
+        bodyFont: {
+          family: fontFamily,
+          size: 13
         }
       }
     },
@@ -338,28 +321,18 @@ const Game = () => {
         display: true,
         title: {
           display: true,
-          text: 'Time',
-          color: '#b0b0b0',
+          text: 'Date',
           font: {
-            family: 'Orbitron',
-            size: 12,
-            weight: 600
+            family: fontFamily,
+            size: 13
           }
         },
         ticks: {
           display: false,
-          color: '#b0b0b0',
           font: {
-            family: 'Exo 2',
-            size: 10
+            family: fontFamily,
+            size: 12
           }
-        },
-        grid: {
-          color: 'rgba(0, 255, 255, 0.1)',
-          lineWidth: 1
-        },
-        border: {
-          color: 'rgba(0, 255, 255, 0.3)'
         }
       },
       y: {
@@ -368,26 +341,16 @@ const Game = () => {
         title: {
           display: true,
           text: 'Price',
-          color: '#b0b0b0',
           font: {
-            family: 'Orbitron',
-            size: 12,
-            weight: 600
+            family: fontFamily,
+            size: 13
           }
         },
         ticks: {
-          color: '#b0b0b0',
           font: {
-            family: 'Exo 2',
-            size: 10
+            family: fontFamily,
+            size: 12
           }
-        },
-        grid: {
-          color: 'rgba(0, 255, 255, 0.1)',
-          lineWidth: 1
-        },
-        border: {
-          color: 'rgba(0, 255, 255, 0.3)'
         }
       }
     }
@@ -400,6 +363,10 @@ const Game = () => {
     if (sessionInterval) clearInterval(sessionInterval);
     if (spinnerTimerRef.current) clearTimeout(spinnerTimerRef.current);
     if (revealTimerRef.current) clearTimeout(revealTimerRef.current);
+    if (nextRoundTimeoutRef.current) clearTimeout(nextRoundTimeoutRef.current);
+    
+    // Clear any error state
+    setError(null);
     
     // Start with loading phase - show spinner for 5 seconds
     setGameState(prevState => ({
@@ -407,7 +374,7 @@ const Game = () => {
       setup: setup.setup,
       options: setup.options,
       overlays: setup.overlays,
-      selectedOption: null,
+      selectedOption: null, // Reset selection for new round
       gamePhase: 'LOADING',
       countdownTime: 20,
       message: 'Preparing chart data...'
@@ -461,9 +428,27 @@ const Game = () => {
           message: 'Game Over! ' + (result.lives <= 0 ? 'You ran out of lives.' : 'Time is up.')
         }));
       } else {
+        // Set loading state before requesting next round
+        setGameState(prevState => ({
+          ...prevState,
+          gamePhase: 'LOADING',
+          message: 'Loading next round...',
+          selectedOption: null
+        }));
+        
         // Request next round
         if (wsRef.current) {
           wsRef.current.send({ action: 'next_round' });
+          
+          // Set a timeout in case the server doesn't respond
+          nextRoundTimeoutRef.current = setTimeout(() => {
+            console.warn('Next round request timed out, attempting to restart game');
+            setGameState(prevState => ({
+              ...prevState,
+              gamePhase: 'INIT',
+              message: 'Connection issue. Please restart the game.',
+            }));
+          }, 10000); // 10 second timeout
         }
       }
     }, 3000);
@@ -565,6 +550,9 @@ const Game = () => {
     const secs = seconds % 60;
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
+
+  // Define chartData by calling buildChartData()
+  const chartData = buildChartData();
 
   return (
     <div className="game-container">

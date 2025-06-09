@@ -24,14 +24,16 @@ const OptionChart = ({ mainData, optionData }) => {
   const dates = [...mainDates, ...optionDates];
   const prices = [...mainPrices, ...optionPrices];
   
+  const fontFamily = `'TT Fellows Uni Width', 'Space Mono', monospace`;
+
   const chartData = {
     labels: dates,
     datasets: [
       {
         data: prices,
-        borderColor: '#00ffff',
-        backgroundColor: 'rgba(0, 255, 255, 0.1)',
-        tension: 0.3,
+        borderColor: 'rgb(75, 192, 192)', // Match main chart color
+        backgroundColor: 'rgba(75, 192, 192, 0.2)', // Match main chart fill
+        tension: 0.1, // Match main chart smoothness
         pointRadius: 0,
         borderWidth: 2,
         pointHoverRadius: 0,
@@ -39,16 +41,30 @@ const OptionChart = ({ mainData, optionData }) => {
       }
     ]
   };
-  
+
   const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: {
         display: false,
+        labels: {
+          font: {
+            family: fontFamily,
+            size: 14
+          }
+        }
       },
       tooltip: {
         enabled: false,
+        titleFont: {
+          family: fontFamily,
+          size: 14
+        },
+        bodyFont: {
+          family: fontFamily,
+          size: 13
+        }
       },
     },
     interaction: {
@@ -66,12 +82,24 @@ const OptionChart = ({ mainData, optionData }) => {
         grid: {
           display: false,
         },
+        ticks: {
+          font: {
+            family: fontFamily,
+            size: 12
+          }
+        }
       },
       y: {
         display: false,
         grid: {
           display: false,
         },
+        ticks: {
+          font: {
+            family: fontFamily,
+            size: 12
+          }
+        }
       },
     },
     animation: {

@@ -93,7 +93,7 @@ class MarketDataClient:
             yf_interval = interval.replace("min", "m")
             
             # Define appropriate period based on interval
-            if yf_interval == "1m":
+            if yf_interval == "60m":
                 period = "5d"  # For 1m data, Yahoo only provides 5 days max
             elif yf_interval in ["5m", "15m"]:
                 period = "60d"
